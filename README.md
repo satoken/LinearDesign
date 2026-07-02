@@ -51,6 +51,22 @@ Fix the coding RNA prefix and design the RNA sequence for the input amino acids 
 The fixed prefix must contain only A/C/G/U (T is accepted and converted to U), must be a
 multiple of 3 nucleotides, and must not contain a stop codon.
 ```
+--fixedutr RNA_PREFIX or -u RNA_PREFIX
+```
+Fix a 5' UTR RNA prefix before the coding sequence. The fixed UTR participates in
+folding free-energy optimization, but it is excluded from translation and CAI scoring.
+The fixed UTR may have any length and must contain only A/C/G/U (T is accepted and
+converted to U).
+```
+--avoidpairrange START-END or -r START-END
+--avoidpairpenalty KCAL
+```
+Add a pseudo-energy penalty for every base pair involving at least one nucleotide in
+the 1-based inclusive range START-END. The range is counted on the final output RNA,
+including any fixed 5' UTR. This can be used to discourage secondary structure around
+the start codon. When this option is active, the reported folding free energy is the
+pseudo-adjusted objective value.
+```
 --verbose or -v
 ```
 Print out more details. (default False)
@@ -102,6 +118,22 @@ echo DTEAI | ./lineardesign --fixedprefix AUGAAC
 mRNA sequence:  AUGAACGAUACGGAGGCGAUC
 mRNA structure: ......(((.((....)))))
 mRNA folding free energy: -1.10 kcal/mol; mRNA CAI: 0.695
+```
+
+## Example: Fixed 5' UTR
+```
+echo MNDTEAI | ./lineardesign --fixedutr GGAA
+mRNA sequence:  GGAAAUGAACGACACCGAGGCCAUU
+mRNA structure: ...((((..(........)..))))
+mRNA folding free energy: -1.20 kcal/mol; mRNA CAI: 0.960
+```
+
+## Example: Discourage Base Pairing in a Range
+```
+echo MNDTEAI | ./lineardesign --avoidpairrange 7-20 --avoidpairpenalty 10
+mRNA sequence:  AUGAACGACACGGAGGCGAUC
+mRNA structure: .....................
+mRNA pseudo-adjusted folding free energy: -0.00 kcal/mol; mRNA CAI: 0.711
 ```
 
 ## Example: Option --verbose (-v)

@@ -221,7 +221,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                         structure[i] = '(';
                                         structure[j-1] = ')';
 
-                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i2_node, j_2_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i2_node, j_2_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                         int count = i2;
                                         for (auto & nuc : temp_string ){
                                             sequence[count] = nuc;
@@ -423,7 +423,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
 
                                             sequence[i] = GET_ACGU(nuci);
 
-                                            auto temp_i1_to_p_nucs = get_nuc_from_dfa_cai<IndexType>(dfa, i1_node, p_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                            auto temp_i1_to_p_nucs = get_nuc_from_dfa_cai<IndexType>(dfa, i1_node, p_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                             assert(temp_i1_to_p_nucs.size() == p - (i+1));
                                             auto count = i+1;
                                             for (auto& nuc : temp_i1_to_p_nucs){
@@ -486,7 +486,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                                 structure[i] = '(';
                                                 structure[j-1] = ')';
 
-                                                auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, q_node, j_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, q_node, j_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                 int count = q;
                                                 for (auto & nuc : temp_string ){
                                                     sequence[count] = nuc;
@@ -525,7 +525,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
 
                                                     structure[i] = '(';
                                                     structure[j-1] = ')';
-                                                    auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                    auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                     int count = right_start;
                                                     for (auto & nuc : temp_string ){
                                                         sequence[count] = nuc;
@@ -569,7 +569,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                                         }
                                                         structure[i] = '(';
                                                         structure[j-1] = ')';
-                                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                         int count = right_start;
                                                         for (auto & nuc : temp_string ){
                                                             sequence[count] = nuc;
@@ -620,7 +620,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                                             }
                                                             structure[i] = '(';
                                                             structure[j-1] = ')';
-                                                            auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                            auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                             auto count = right_start;
                                                             for (auto & nuc : temp_string ){
                                                                 sequence[count] = nuc;
@@ -658,7 +658,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                                         sequence[i] = GET_ACGU(nuci);
                                                         sequence[i+1] = GET_ACGU(nuci1);
                                                         sequence[p-1] = GET_ACGU(nucp_1);
-                                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i2_node, p_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                        auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i2_node, p_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                         int count = i+2;
                                                         for (auto & nuc : temp_string ){
                                                             sequence[count] = nuc;
@@ -674,7 +674,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                                         structure[i] = '(';
                                                         structure[j-1] = ')';
 
-                                                        temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                                        temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, right_start_node, right_end_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                                         count = right_start;
                                                         for (auto & nuc : temp_string ){
                                                             sequence[count] = nuc;
@@ -765,7 +765,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                             if (state.score == m2_state.score && abs(state.cai_score - cai_score) < epsilon){
                                 stk.push(make_tuple(p_node, q_node, m2_state, Beam_type::BEAM_M2, -1));
 
-                                auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i1_node, p_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                auto temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, i1_node, p_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                 auto count = i+1;
                                 for (auto & nuc : temp_string ){
                                     sequence[count] = nuc;
@@ -774,7 +774,7 @@ BacktraceResult BeamCKYParser<ScoreType, IndexType, NodeType>::backtrace(DFA_t& 
                                 assert(count == p);
 
                                 temp_string.clear();
-                                temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, q_node, j_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon);
+                                temp_string = get_nuc_from_dfa_cai<IndexType>(dfa, q_node, j_1_node, protein, best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
                                 count = q;
                                 for (auto & nuc : temp_string ){
                                     sequence[count] = nuc;

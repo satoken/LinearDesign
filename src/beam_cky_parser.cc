@@ -37,34 +37,45 @@ double BeamCKYParser<ScoreType, IndexType, NodeType>::get_broken_codon_score(
     if (s_index >= t_index)
         return 0.0;
 
-    auto aa_left = protein[s_index / 3]; // tri letter
+    if (t_index <= coding_start)
+        return 0.0;
 
-    auto aa_right = protein[(int)(s_index / 3)];
-    if (t_index / 3 < protein.size()){
-        aa_right = protein[(int)(t_index / 3)];
+    if (s_index < coding_start) {
+        NodeType coding_start_node = make_pair(coding_start, 0);
+        return get_broken_codon_score(coding_start_node, end_node);
+    }
+
+    auto s_coding_index = s_index - coding_start;
+    auto t_coding_index = t_index - coding_start;
+
+    auto aa_left = protein[s_coding_index / 3]; // tri letter
+
+    auto aa_right = protein[(int)(s_coding_index / 3)];
+    if (t_coding_index / 3 < protein.size()){
+        aa_right = protein[(int)(t_coding_index / 3)];
     }
         
-    auto start_node_re_index = make_pair(s_index % 3, start_node.second);
-    auto end_node_re_index = make_pair(t_index % 3, end_node.second);
+    auto start_node_re_index = make_pair(s_coding_index % 3, start_node.second);
+    auto end_node_re_index = make_pair(t_coding_index % 3, end_node.second);
 
     double ret = 0.0;
 
-    if (t_index - s_index < 3) {
-        if (s_index / 3 == t_index / 3) {
+    if (t_coding_index - s_coding_index < 3) {
+        if (s_coding_index / 3 == t_coding_index / 3) {
             ret = std::get<0>(best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index,end_node_re_index)]);
         }else{
             double left_ln_cai = 0.0, right_ln_cai = 0.0;
-            if (s_index % 3 != 0) 
+            if (s_coding_index % 3 != 0) 
                 left_ln_cai = std::get<0>(best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index,make_pair(0, 0))]);
-            if (t_index % 3 != 0) 
+            if (t_coding_index % 3 != 0) 
                 right_ln_cai = std::get<0>(best_path_in_one_codon_unit[aa_right][make_tuple(make_pair(0, 0), end_node_re_index)]);
             ret = left_ln_cai + right_ln_cai;
         }
     }else{
         double left_ln_cai = 0.0, right_ln_cai = 0.0;
-        if (s_index % 3 != 0) 
+        if (s_coding_index % 3 != 0) 
             left_ln_cai = std::get<0>(best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index,make_pair(0, 0))]);
-        if (t_index % 3 != 0) 
+        if (t_coding_index % 3 != 0) 
             right_ln_cai = std::get<0>(best_path_in_one_codon_unit[aa_right][make_tuple(make_pair(0, 0), end_node_re_index)]);
         ret = left_ln_cai + right_ln_cai;
     }
@@ -238,7 +249,9 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::hairpin_beam(IndexType j, DF
             NucType newnucj = get<1>(j1_node_newnucj);
             if (nucj != newnucj) continue;
             NodeType j1_node = get<0>(j1_node_newnucj);
-            update_if_better(bestP[j1_node][i_node_nucpair_], state.score, state.cai_score);
+            update_if_better(bestP[j1_node][i_node_nucpair_],
+                    score_with_pair_penalty(state.score, i, j),
+                    state.cai_score);
         }
     }
 
@@ -294,6 +307,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::Multi_beam(IndexType j, DFA_
         }
         //  2. generate multi(i, j) -> p(i, j)
         auto newscore = new_state_score.score - func15(i, j, nuci, -1, -1, nucj_1, seq_length); // hzhang: TODO
+        newscore = score_with_pair_penalty(newscore, i, j - 1);
         update_if_better(bestP[j_node][i_node_nucpair_], newscore, new_state_score.cai_score);
     }
 }
@@ -336,6 +350,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
                     auto outer_pair = NTP(nuci_1, nucj);
                     if (_allowed_pairs[nuci_1][nucj]){
                         auto newscore = stacking_score[outer_pair-1][pair_nuc-1] + state.score;
+                        newscore = score_with_pair_penalty(newscore, i_1_node.first, j);
                         double cai_score = state.cai_score + (weight_nuci_1 + weight_nucj);
                         NodeNucpair temp = {i_1_node.first, i_1_node.second, static_cast<NucPairType>(NTP(nuci_1, nucj))};
                         update_if_better(bestP[j1_node][temp], newscore, cai_score);
@@ -373,6 +388,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
                             
                             auto newscore = bulge_score[outer_pair-1][pair_nuc-1][q-j-1]
                                             + state.score;
+                            newscore = score_with_pair_penalty(newscore, i_1_node.first, q);
 
                             double cai_score;
                             if ((q_node.first - j_node.first) <= SINGLE_MAX_LEN)
@@ -419,6 +435,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
 
                             auto newscore = bulge_score[outer_pair-1][pair_nuc-1][i-p-1]
                                             + state.score;
+                            newscore = score_with_pair_penalty(newscore, p_1_node.first, j);
                             
                             double cai_score;
 
@@ -511,6 +528,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
                                                     }
                                                     double cai_score = state.cai_score + (weight_left + weight_nucj + weight_nucq); //j+1 == q
 
+                                                    newscore = score_with_pair_penalty(newscore, p_1_node.first, q);
                                                     update_if_better(BestP_val, newscore, cai_score);
                                                 }else if (q == j+2){
                                                     for(auto& q_1_node_list : dfa.auxiliary_left_edges[q_node]){
@@ -536,6 +554,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
 
                                                             auto cai_score = state.cai_score + (weight_left + weight_nucj + weight_nucq_1 + weight_nucq);
 
+                                                            newscore = score_with_pair_penalty(newscore, p_1_node.first, q);
                                                             update_if_better(BestP_val, newscore, cai_score);
                                                         }
                                                         if(dfa.nodes[q-1].size() == 2) break;
@@ -568,6 +587,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
                                                             else
                                                                 cai_score = state.cai_score + (weight_left + weight_nucj + get_broken_codon_score(j1_node, q_1_node) + weight_nucq_1 + weight_nucq);
 
+                                                            newscore = score_with_pair_penalty(newscore, p_1_node.first, q);
                                                             update_if_better(BestP_val, newscore, cai_score);
                                                         }
                                                         if(dfa.nodes[q-1].size() == 2) break;
@@ -601,6 +621,7 @@ void BeamCKYParser<ScoreType, IndexType, NodeType>::P_beam(IndexType j, DFA_t& d
                                                             else
                                                                 cai_score = state.cai_score + (weight_left + weight_nucj + get_broken_codon_score(j1_node, q_1_node) + weight_nucq_1 + weight_nucq);
                                                             
+                                                            newscore = score_with_pair_penalty(newscore, p_1_node.first, q);
                                                             update_if_better(BestP_val, newscore, cai_score);
                                                         }
                                                         if(dfa.nodes[q-1].size() == 2) break;
@@ -1120,15 +1141,17 @@ DecoderResult<double, IndexType> BeamCKYParser<ScoreType, IndexType, NodeType>::
         std::unordered_map<std::string, std::string>& aa_best_in_codon,
         std::unordered_map<std::string, std::unordered_map<std::tuple<NodeType, NodeType>, std::tuple<double, NucType, NucType>, 
             std::hash<std::tuple<NodeType, NodeType>>>>& best_path_in_one_codon,
-            std::unordered_map<string, Lattice<IndexType>>& aa_graphs_with_ln_weights) {
+            std::unordered_map<string, Lattice<IndexType>>& aa_graphs_with_ln_weights,
+            IndexType coding_start_) {
     
 
     protein = p;
+    coding_start = coding_start_;
     aa_graphs_with_ln_w = aa_graphs_with_ln_weights;
     aa_best_path_in_a_whole_codon = aa_best_in_codon;
     best_path_in_one_codon_unit = best_path_in_one_codon;
 
-    seq_length = 3 * static_cast<IndexType>(aa_seq.size());
+    seq_length = coding_start + 3 * static_cast<IndexType>(aa_seq.size());
     next_pair.resize(5);
     next_pair_set.resize(5);
     get_next_pair(dfa);
@@ -1281,7 +1304,7 @@ DecoderResult<double, IndexType> BeamCKYParser<ScoreType, IndexType, NodeType>::
 
 template <typename ScoreType, typename IndexType, typename NodeType>
 BeamCKYParser<ScoreType, IndexType, NodeType>::BeamCKYParser(const double lambda_value, const bool verbose)
-        : lambda(lambda_value), is_verbose(verbose) {
+        : lambda(lambda_value), is_verbose(verbose), pair_penalty_start(-1), pair_penalty_end(-1), pair_penalty(0) {
         func9(0, 0);
 }
 

@@ -50,10 +50,36 @@ template <typename IndexType,
           typename NucType = IndexType,
           typename NodeType = std::pair<IndexType, NumType>,
           typename DFAType = DFA<IndexType>>
+string get_nuc_from_fixed_dfa_path(DFAType& dfa, NodeType start_node, const NodeType& end_node) {
+    string seq;
+    NodeType current_node = start_node;
+    while (current_node != end_node) {
+        bool found = false;
+        for (auto& edge : dfa.right_edges[current_node]) {
+            NodeType next_node = std::get<0>(edge);
+            if (next_node.first <= end_node.first) {
+                seq.append(1, GET_ACGU(std::get<1>(edge)));
+                current_node = next_node;
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            assert(false);
+        }
+    }
+    return seq;
+}
+
+template <typename IndexType,
+          typename NucType = IndexType,
+          typename NodeType = std::pair<IndexType, NumType>,
+          typename DFAType = DFA<IndexType>>
 string get_nuc_from_dfa_cai(DFAType& dfa, const NodeType& start_node, const NodeType& end_node,
         const std::vector<std::string>& protein, std::unordered_map<std::string, std::unordered_map<std::tuple<NodeType, NodeType>, 
         std::tuple<double, NucType, NucType>, std::hash<std::tuple<NodeType, NodeType>>>>&
-        best_path_in_one_codon_unit, std::unordered_map<std::string, std::string>& aa_best_path_in_a_whole_codon) {
+        best_path_in_one_codon_unit, std::unordered_map<std::string, std::string>& aa_best_path_in_a_whole_codon,
+        IndexType coding_start = 0) {
 
     IndexType s_index = start_node.first;
     IndexType t_index = end_node.first;
@@ -61,12 +87,28 @@ string get_nuc_from_dfa_cai(DFAType& dfa, const NodeType& start_node, const Node
     if (s_index >= t_index)
         return "";
 
-    auto aa_left = protein[s_index / 3]; // tri letter
-    auto aa_right = protein[t_index / 3];
-    auto start_node_re_index = make_pair(s_index % 3, start_node.second);
-    auto end_node_re_index = make_pair(t_index % 3, end_node.second);
-    if (t_index - s_index < 3) {
-        if (s_index / 3 == t_index / 3) {
+    if (t_index <= coding_start) {
+        return get_nuc_from_fixed_dfa_path<IndexType>(dfa, start_node, end_node);
+    }
+
+    if (s_index < coding_start) {
+        NodeType coding_start_node = make_pair(coding_start, 0);
+        return get_nuc_from_fixed_dfa_path<IndexType>(dfa, start_node, coding_start_node) +
+               get_nuc_from_dfa_cai<IndexType>(dfa, coding_start_node, end_node, protein,
+                       best_path_in_one_codon_unit, aa_best_path_in_a_whole_codon, coding_start);
+    }
+
+    IndexType s_coding_index = s_index - coding_start;
+    IndexType t_coding_index = t_index - coding_start;
+    auto aa_left = protein[s_coding_index / 3]; // tri letter
+    std::string aa_right;
+    if (t_coding_index / 3 < protein.size()) {
+        aa_right = protein[t_coding_index / 3];
+    }
+    auto start_node_re_index = make_pair(s_coding_index % 3, start_node.second);
+    auto end_node_re_index = make_pair(t_coding_index % 3, end_node.second);
+    if (t_coding_index - s_coding_index < 3) {
+        if (s_coding_index / 3 == t_coding_index / 3) {
             std::string temp_seq = "";
             auto& nucs = best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index, end_node_re_index)];
             temp_seq.append(1, GET_ACGU(std::get<1>(nucs)));
@@ -80,14 +122,14 @@ string get_nuc_from_dfa_cai(DFAType& dfa, const NodeType& start_node, const Node
         } else {
             std::string temp_left = "";
             std::string temp_right = "";
-            if (s_index % 3 != 0) {
+            if (s_coding_index % 3 != 0) {
                 auto& nucs = best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index, make_pair(0, 0))];
                 temp_left.append(1, GET_ACGU(std::get<1>(nucs)));
                 if (std::get<2>(nucs) != k_void_nuc) 
                     temp_left.append(1, GET_ACGU(std::get<2>(nucs)));
             }
 
-            if (t_index % 3 != 0) {
+            if (t_coding_index % 3 != 0) {
                 auto& nucs = best_path_in_one_codon_unit[aa_right][make_tuple(make_pair(0, 0), end_node_re_index)];
                 temp_right.append(1, GET_ACGU(std::get<1>(nucs)));
                 if (std::get<2>(nucs) != k_void_nuc) 
@@ -105,18 +147,18 @@ string get_nuc_from_dfa_cai(DFAType& dfa, const NodeType& start_node, const Node
         std::string temp_mid = "";
         std::string temp_right = "";
 
-        if (s_index % 3 != 0) {
+        if (s_coding_index % 3 != 0) {
             auto& nucs = best_path_in_one_codon_unit[aa_left][make_tuple(start_node_re_index, make_pair(0, 0))];
             temp_left.append(1, GET_ACGU(std::get<1>(nucs)));
             if (std::get<2>(nucs) != k_void_nuc) 
                 temp_left.append(1, GET_ACGU(std::get<2>(nucs)));
         }
 
-        IndexType protein_start_index = s_index / 3;
-        if (s_index % 3 != 0)
+        IndexType protein_start_index = s_coding_index / 3;
+        if (s_coding_index % 3 != 0)
             protein_start_index++;
 
-        IndexType protein_end_index = t_index / 3;
+        IndexType protein_end_index = t_coding_index / 3;
 
         if (protein_start_index != protein_end_index) {
             for (IndexType protein_index = protein_start_index; protein_index < protein_end_index; ++protein_index) {
@@ -137,7 +179,7 @@ string get_nuc_from_dfa_cai(DFAType& dfa, const NodeType& start_node, const Node
             }
         }
 
-        if (t_index % 3 != 0) {
+        if (t_coding_index % 3 != 0) {
             auto& nucs = best_path_in_one_codon_unit[aa_right][make_tuple(make_pair(0, 0), end_node_re_index)];
             temp_right.append(1, GET_ACGU(std::get<1>(nucs)));
             if (std::get<2>(nucs) != k_void_nuc) 
@@ -168,6 +210,12 @@ public:
 
     BeamCKYParser(const double lambda_value, const bool verbose);
 
+    void set_pair_penalty(IndexType range_start, IndexType range_end, ScoreType penalty) {
+        pair_penalty_start = range_start;
+        pair_penalty_end = range_end;
+        pair_penalty = penalty;
+    }
+
     DecoderResult<double, IndexType> parse(DFA_t& dfa, 
         Codon& codon, 
         std::string& aa_seq, 
@@ -175,7 +223,8 @@ public:
         std::unordered_map<std::string, std::string>& aa_best_in_codon,
         std::unordered_map<std::string, std::unordered_map<std::tuple<NodeType, NodeType>, 
         std::tuple<double, NucType, NucType>, std::hash<std::tuple<NodeType, NodeType>>>>& best_path_in_one_codon,
-        std::unordered_map<string, Lattice<IndexType>>& aa_graphs_with_ln_weights);
+        std::unordered_map<string, Lattice<IndexType>>& aa_graphs_with_ln_weights,
+        IndexType coding_start = 0);
 
 private:
     
@@ -213,6 +262,16 @@ private:
         }
     }
 
+    ScoreType score_with_pair_penalty(const ScoreType score, const IndexType left, const IndexType right) const {
+        if (pair_penalty <= 0 || pair_penalty_start < 0 || pair_penalty_end < pair_penalty_start)
+            return score;
+        if ((left >= pair_penalty_start && left <= pair_penalty_end) ||
+                (right >= pair_penalty_start && right <= pair_penalty_end)) {
+            return score - pair_penalty;
+        }
+        return score;
+    }
+
 
     void get_next_pair(DFA_t& dfa);
     void get_next_pair_set();
@@ -236,6 +295,10 @@ private:
     bool is_verbose;
 
     IndexType seq_length; 
+    IndexType coding_start;
+    IndexType pair_penalty_start;
+    IndexType pair_penalty_end;
+    ScoreType pair_penalty;
 
     BestX_t_CAI bestH, bestP, bestMulti;
     BestM_t_CAI bestM2, bestM, bestM_P; // hzhang: bestM_P

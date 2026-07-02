@@ -513,16 +513,27 @@ template <typename IndexType,
           typename LatticeType = Lattice<IndexType>,
           typename DFAType = DFA<IndexType>>
 DFAType get_dfa(unordered_map<string, LatticeType> aa_graphs, vector<string> aa_seq,
-        const string& fixed_prefix = "") {
+        const string& fixed_prefix = "", const string& fixed_utr = "") {
     DFAType dfa = DFAType();
-    NodeType newnode = make_pair(3 * static_cast<IndexType>(aa_seq.size()), 0);
+    const IndexType coding_start = static_cast<IndexType>(fixed_utr.size());
+    NodeType newnode = make_pair(coding_start + 3 * static_cast<IndexType>(aa_seq.size()), 0);
     dfa.add_node(newnode);
+
+    NodeType prev_node = make_pair(0, 0);
+    dfa.add_node(prev_node);
+    for (IndexType pos = 0; pos < coding_start; ++pos) {
+        NodeType next_node = make_pair(pos + 1, 0);
+        dfa.add_node(next_node);
+        dfa.add_edge(prev_node, next_node, GET_ACGU_NUC(fixed_utr[pos]), 0.0);
+        prev_node = next_node;
+    }
+
     IndexType i = 0;
     IndexType i3;
     string aa;
     LatticeType graph;
     for(auto& item : aa_seq) {
-        i3 = i * 3;
+        i3 = coding_start + i * 3;
         aa = aa_seq[i];
         graph = aa_graphs[aa];
         for (IndexType pos = 0; pos <= 2; pos++) {
@@ -533,9 +544,9 @@ DFAType get_dfa(unordered_map<string, LatticeType> aa_graphs, vector<string> aa_
                 for (auto& edge : graph.right_edges[node]) {
                     NodeType n2 = get<0>(edge);
                     IndexType nuc = get<1>(edge);
-                    IndexType global_pos = i3 + pos;
-                    if (!fixed_prefix.empty() && global_pos < fixed_prefix.size() &&
-                            nuc != GET_ACGU_NUC(fixed_prefix[global_pos])) {
+                    IndexType coding_pos = i * 3 + pos;
+                    if (!fixed_prefix.empty() && coding_pos < fixed_prefix.size() &&
+                            nuc != GET_ACGU_NUC(fixed_prefix[coding_pos])) {
                         continue;
                     }
                     num = get<1>(n2);

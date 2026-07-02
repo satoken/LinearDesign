@@ -12,6 +12,9 @@ def setgflags():
     flags.DEFINE_boolean('verbose', False, "print out more details", short_name='v')
     flags.DEFINE_string('codonusage', 'codon_usage_freq_table_human.csv', "import a Codon Usage Frequency Table", short_name='c')
     flags.DEFINE_string('fixedprefix', '', "fix the RNA prefix before designing the remaining amino-acid sequence", short_name='p')
+    flags.DEFINE_string('fixedutr', '', "fix a 5' UTR RNA prefix that is excluded from translation and CAI", short_name='u')
+    flags.DEFINE_string('avoidpairrange', '', "discourage base pairs involving this 1-based inclusive nucleotide range, e.g. 10-50", short_name='r')
+    flags.DEFINE_float('avoidpairpenalty', 0.0, "pseudo-energy penalty in kcal/mol per base pair involving --avoidpairrange")
     argv = FLAGS(sys.argv)
 
 def main():
@@ -20,9 +23,13 @@ def main():
     verbose_ = '1' if FLAGS.verbose else '0'
     codon_usage = str(FLAGS.codonusage)
     fixed_prefix = str(FLAGS.fixedprefix)
+    fixed_utr = str(FLAGS.fixedutr)
+    avoid_pair_range = str(FLAGS.avoidpairrange)
+    avoid_pair_penalty = str(FLAGS.avoidpairpenalty)
 
     path = os.path.dirname(os.path.abspath(__file__))
-    cmd = ["%s/%s" % (path, ('bin/LinearDesign_2D')), lambda_, verbose_, codon_usage, fixed_prefix]
+    cmd = ["%s/%s" % (path, ('bin/LinearDesign_2D')), lambda_, verbose_, codon_usage,
+           fixed_prefix, fixed_utr, avoid_pair_range, avoid_pair_penalty]
     sys.exit(subprocess.call(cmd, stdin=sys.stdin))
     
 if __name__ == '__main__':
