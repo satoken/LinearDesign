@@ -1,0 +1,11 @@
+{
+  "name": "codex cli",
+  "image": "mcr.microsoft.com/vscode/devcontainers/cpp:debian13",
+  "features": {
+    "ghcr.io/dirien/devcontainer-feature-codex/codex:0": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
+}

@@ -17,7 +17,7 @@ For questions, please contact the lead corresponding author at <liang.huang.sh@g
 ## Dependencies
 Clang 11.0.0 (or above) or GCC 4.8.5 (or above)
 
-python2.7
+python3
 
 ## To Compile
 ```
