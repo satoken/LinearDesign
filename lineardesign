@@ -11,6 +11,7 @@ def setgflags():
     flags.DEFINE_float('lambda', 0.0, "set lambda", short_name='l')
     flags.DEFINE_boolean('verbose', False, "print out more details", short_name='v')
     flags.DEFINE_string('codonusage', 'codon_usage_freq_table_human.csv', "import a Codon Usage Frequency Table", short_name='c')
+    flags.DEFINE_string('fixedprefix', '', "fix the RNA prefix before designing the remaining amino-acid sequence", short_name='p')
     argv = FLAGS(sys.argv)
 
 def main():
@@ -18,10 +19,11 @@ def main():
     lambda_ = str(FLAGS.l)
     verbose_ = '1' if FLAGS.verbose else '0'
     codon_usage = str(FLAGS.codonusage)
+    fixed_prefix = str(FLAGS.fixedprefix)
 
     path = os.path.dirname(os.path.abspath(__file__))
-    cmd = ["%s/%s" % (path, ('bin/LinearDesign_2D')), lambda_, verbose_, codon_usage]
-    subprocess.call(cmd, stdin=sys.stdin)
+    cmd = ["%s/%s" % (path, ('bin/LinearDesign_2D')), lambda_, verbose_, codon_usage, fixed_prefix]
+    sys.exit(subprocess.call(cmd, stdin=sys.stdin))
     
 if __name__ == '__main__':
     setgflags()

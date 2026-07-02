@@ -15,6 +15,18 @@
 
 using namespace LinearDesign;
 
+static string normalize_fixed_prefix(string fixed_prefix) {
+    transform(fixed_prefix.begin(), fixed_prefix.end(), fixed_prefix.begin(), ::toupper);
+    for (auto& nuc : fixed_prefix) {
+        if (nuc == 'T')
+            nuc = 'U';
+        if (nuc != 'A' && nuc != 'C' && nuc != 'G' && nuc != 'U') {
+            throw runtime_error("fixed RNA prefix must contain only A, C, G, U, or T");
+        }
+    }
+    return fixed_prefix;
+}
+
 template <typename ScoreType, typename IndexType>
 bool output_result(const DecoderResult<ScoreType, IndexType>& result, 
         const double duration, const double lambda, const bool is_verbose, 
@@ -39,6 +51,7 @@ void show_usage() {
     cerr << "echo SEQUENCE | ./lineardesign -l [LAMBDA]" << endl;
     cerr << "OR" << endl;
     cerr << "cat SEQ_FILE_OR_FASTA_FILE | ./lineardesign -l [LAMBDA]" << endl;
+    cerr << "Optional: --fixedprefix RNA_PREFIX fixes a coding RNA prefix before the input amino-acid sequence" << endl;
 }
 
 
@@ -48,9 +61,10 @@ int main(int argc, char** argv) {
     double lambda = 0.0f;
     bool is_verbose = false;
     string CODON_TABLE = "./codon_usage_freq_table_human.csv";
+    string fixed_prefix;
 
     // parse args
-    if (argc != 4) {
+    if (argc != 4 && argc != 5) {
         show_usage();
         return 1;
     }else{
@@ -59,11 +73,36 @@ int main(int argc, char** argv) {
         if (string(argv[3]) != ""){
             CODON_TABLE = argv[3];
         }
+        if (argc == 5) {
+            try {
+                fixed_prefix = normalize_fixed_prefix(argv[4]);
+            } catch (const exception& e) {
+                cerr << e.what() << endl;
+                return 1;
+            }
+        }
     } 
     lambda *= 100.;
     
     // load codon table and coding wheel
     Codon codon(CODON_TABLE);
+    string fixed_prefix_aa;
+    if (!fixed_prefix.empty()) {
+        if (fixed_prefix.length() % 3 != 0) {
+            cerr << "fixed RNA prefix length must be a multiple of 3 for coding-prefix design" << endl;
+            return 1;
+        }
+        try {
+            fixed_prefix_aa = codon.cvt_rna_seq_to_aa_seq(fixed_prefix);
+        } catch (const exception& e) {
+            cerr << "fixed RNA prefix is not valid for the codon table: " << e.what() << endl;
+            return 1;
+        }
+        if (fixed_prefix_aa.find('*') != string::npos) {
+            cerr << "fixed RNA prefix must not contain a stop codon" << endl;
+            return 1;
+        }
+    }
     std::unordered_map<string, Lattice<IndexType>> aa_graphs_with_ln_weights;
     std::unordered_map<std::string, std::unordered_map<std::tuple<NodeType, NodeType>, std::tuple<double, NucType, NucType>, std::hash<std::tuple<NodeType, NodeType>>>> best_path_in_one_codon_unit;
     std::unordered_map<std::string, std::string> aa_best_path_in_a_whole_codon;
@@ -99,7 +138,10 @@ int main(int argc, char** argv) {
         aa_tri_seq.clear();
         if (is_verbose)
             cout << "Input protein: " << aa_seq << endl;
-        if (!ReaderTraits<Fasta>::cvt_to_seq(aa_seq, aa_tri_seq)) 
+        string design_aa_seq = fixed_prefix_aa + aa_seq;
+        if (is_verbose && !fixed_prefix.empty())
+            cout << "Fixed RNA prefix: " << fixed_prefix << "; translated prefix protein: " << fixed_prefix_aa << endl;
+        if (!ReaderTraits<Fasta>::cvt_to_seq(design_aa_seq, aa_tri_seq)) 
             continue;
 
         // init parser
@@ -108,8 +150,8 @@ int main(int argc, char** argv) {
         auto protein = util::split(aa_tri_seq, ' ');
         // parse
         auto system_start = chrono::system_clock::now();
-        auto dfa = get_dfa<IndexType>(aa_graphs_with_ln_weights, util::split(aa_tri_seq, ' '));
-        auto result = parser.parse(dfa, codon, aa_seq, protein, aa_best_path_in_a_whole_codon, best_path_in_one_codon_unit, aa_graphs_with_ln_weights);
+        auto dfa = get_dfa<IndexType>(aa_graphs_with_ln_weights, util::split(aa_tri_seq, ' '), fixed_prefix);
+        auto result = parser.parse(dfa, codon, design_aa_seq, protein, aa_best_path_in_a_whole_codon, best_path_in_one_codon_unit, aa_graphs_with_ln_weights);
         auto system_diff = chrono::system_clock::now() - system_start;
         auto system_duration = chrono::duration<double>(system_diff).count();  
 
@@ -117,10 +159,16 @@ int main(int argc, char** argv) {
         output_result(result, system_duration, lambda, is_verbose, codon, CODON_TABLE);
 
 #ifdef FINAL_CHECK
-        if (codon.cvt_rna_seq_to_aa_seq(result.sequence) != aa_seq) {
+        if (!fixed_prefix.empty() && result.sequence.substr(0, fixed_prefix.length()) != fixed_prefix) {
+            std::cerr << "Fixed Prefix Check Failed:" << std::endl;
+            std::cerr << result.sequence.substr(0, fixed_prefix.length()) << std::endl;
+            std::cerr << fixed_prefix << std::endl;
+            assert(false);
+        }
+        if (codon.cvt_rna_seq_to_aa_seq(result.sequence) != design_aa_seq) {
             std::cerr << "Final Check Failed:" << std::endl;
             std::cerr << codon.cvt_rna_seq_to_aa_seq(result.sequence) << std::endl;
-            std::cerr << aa_seq << std::endl;
+            std::cerr << design_aa_seq << std::endl;
             assert(false);
         }
 #endif

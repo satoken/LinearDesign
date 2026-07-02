@@ -512,7 +512,8 @@ template <typename IndexType,
           typename NodeType = pair<IndexType, NumType>,
           typename LatticeType = Lattice<IndexType>,
           typename DFAType = DFA<IndexType>>
-DFAType get_dfa(unordered_map<string, LatticeType> aa_graphs, vector<string> aa_seq) {
+DFAType get_dfa(unordered_map<string, LatticeType> aa_graphs, vector<string> aa_seq,
+        const string& fixed_prefix = "") {
     DFAType dfa = DFAType();
     NodeType newnode = make_pair(3 * static_cast<IndexType>(aa_seq.size()), 0);
     dfa.add_node(newnode);
@@ -532,6 +533,11 @@ DFAType get_dfa(unordered_map<string, LatticeType> aa_graphs, vector<string> aa_
                 for (auto& edge : graph.right_edges[node]) {
                     NodeType n2 = get<0>(edge);
                     IndexType nuc = get<1>(edge);
+                    IndexType global_pos = i3 + pos;
+                    if (!fixed_prefix.empty() && global_pos < fixed_prefix.size() &&
+                            nuc != GET_ACGU_NUC(fixed_prefix[global_pos])) {
+                        continue;
+                    }
                     num = get<1>(n2);
                     NodeType newn2 = make_pair(i3 + pos + 1, num);
                     dfa.add_edge(newnode, newn2, nuc, get<2>(edge));

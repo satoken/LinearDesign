@@ -45,6 +45,12 @@ Set LAMBDA, a hyperparameter balancing MFE and CAI. (default 0.0)
 Import a Codon Usage Frequency Table. See "codon_usage_freq_table_human.csv" for the format.
 (default: using human codon usage frequency table)
 ```
+--fixedprefix RNA_PREFIX or -p RNA_PREFIX
+```
+Fix the coding RNA prefix and design the RNA sequence for the input amino acids after it.
+The fixed prefix must contain only A/C/G/U (T is accepted and converted to U), must be a
+multiple of 3 nucleotides, and must not contain a stop codon.
+```
 --verbose or -v
 ```
 Print out more details. (default False)
@@ -88,6 +94,14 @@ echo MNDTEAI | ./lineardesign -l 0.3 --codonusage codon_usage_freq_table_yeast.c
 mRNA sequence:  AUGAAUGAUACGGAAGCGAUC
 mRNA structure: ......(((.((....)))))
 mRNA folding free energy: -1.10 kcal/mol; mRNA CAI: 0.670
+```
+
+## Example: Fixed RNA Prefix
+```
+echo DTEAI | ./lineardesign --fixedprefix AUGAAC
+mRNA sequence:  AUGAACGAUACGGAGGCGAUC
+mRNA structure: ......(((.((....)))))
+mRNA folding free energy: -1.10 kcal/mol; mRNA CAI: 0.695
 ```
 
 ## Example: Option --verbose (-v)
