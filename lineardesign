@@ -15,6 +15,11 @@ def setgflags():
     flags.DEFINE_string('fixedutr', '', "fix a 5' UTR RNA prefix that is excluded from translation and CAI", short_name='u')
     flags.DEFINE_string('avoidpairrange', '', "discourage base pairs involving this 1-based inclusive nucleotide range, e.g. 10-50", short_name='r')
     flags.DEFINE_float('avoidpairpenalty', 0.0, "pseudo-energy penalty in kcal/mol per base pair involving --avoidpairrange")
+    flags.DEFINE_integer('samples', 1, "number of perturb-and-map samples", short_name='n')
+    flags.DEFINE_float('gumbelloc', 0.0, "Gumbel distribution location for perturb-and-map")
+    flags.DEFINE_float('gumbelscale', 1.0, "Gumbel distribution scale for perturb-and-map")
+    flags.DEFINE_float('perturbstrength', 0.0, "multiplier for Gumbel perturbations")
+    flags.DEFINE_integer('seed', -1, "random seed for perturb-and-map; -1 uses random_device")
     argv = FLAGS(sys.argv)
 
 def main():
@@ -26,10 +31,16 @@ def main():
     fixed_utr = str(FLAGS.fixedutr)
     avoid_pair_range = str(FLAGS.avoidpairrange)
     avoid_pair_penalty = str(FLAGS.avoidpairpenalty)
+    samples = str(FLAGS.samples)
+    gumbel_loc = str(FLAGS.gumbelloc)
+    gumbel_scale = str(FLAGS.gumbelscale)
+    perturb_strength = str(FLAGS.perturbstrength)
+    seed = str(FLAGS.seed)
 
     path = os.path.dirname(os.path.abspath(__file__))
     cmd = ["%s/%s" % (path, ('bin/LinearDesign_2D')), lambda_, verbose_, codon_usage,
-           fixed_prefix, fixed_utr, avoid_pair_range, avoid_pair_penalty]
+           fixed_prefix, fixed_utr, avoid_pair_range, avoid_pair_penalty,
+           samples, gumbel_loc, gumbel_scale, perturb_strength, seed]
     sys.exit(subprocess.call(cmd, stdin=sys.stdin))
     
 if __name__ == '__main__':

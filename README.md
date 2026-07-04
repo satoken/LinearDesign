@@ -67,6 +67,18 @@ including any fixed 5' UTR. This can be used to discourage secondary structure a
 the start codon. When this option is active, the reported folding free energy is the
 pseudo-adjusted objective value.
 ```
+--samples N or -n N
+--gumbelloc LOC
+--gumbelscale SCALE
+--perturbstrength WEIGHT
+--seed SEED
+```
+Run perturb-and-map sampling. For each sample, independent Gumbel noise with the
+given location and scale is added to coding-lattice transition scores after being
+multiplied by WEIGHT, then the MAP design is decoded. `--samples 1` or
+`--perturbstrength 0` recovers the deterministic behavior. `--seed -1` uses
+non-deterministic seeding; any non-negative seed makes the samples reproducible.
+```
 --verbose or -v
 ```
 Print out more details. (default False)
@@ -134,6 +146,17 @@ echo MNDTEAI | ./lineardesign --avoidpairrange 7-20 --avoidpairpenalty 10
 mRNA sequence:  AUGAACGACACGGAGGCGAUC
 mRNA structure: .....................
 mRNA pseudo-adjusted folding free energy: -0.00 kcal/mol; mRNA CAI: 0.711
+```
+
+## Example: Perturb-and-Map Sampling
+```
+echo MNDTEAI | ./lineardesign --samples 3 --gumbelloc 0 --gumbelscale 1 --perturbstrength 5 --seed 123
+# sample 1
+mRNA sequence:  AUGAAUGAUACGGAGGCGAUC
+...
+# sample 2
+mRNA sequence:  AUGAAUGAUACGGAGGCGAUC
+...
 ```
 
 ## Example: Option --verbose (-v)
